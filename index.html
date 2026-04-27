@@ -519,25 +519,28 @@ window.deploy = async () => {
     const net = NETS[network];
     log('info', `Deploying to ${net.name}…`);
     log('dim', `Wallet: ${short(wallet.address)}`);
-    log('dim', `RPC: ${net.rpc}`);
 
-    // Dynamically import genlayer-js
+    // Dynamically import genlayer-js — use official chain objects to avoid ToBigInt errors
     log('info', 'Loading genlayer-js SDK…');
     const { createClient } = await import('genlayer-js');
+    const chains = await import('genlayer-js/chains');
     log('ok', 'SDK loaded ✓');
 
-    // Build chain config with MetaMask as signer
-    // Pass just the address — MetaMask handles signing via window.ethereum
-    const chainConfig = {
-      id: network,
-      name: net.name,
-      rpcUrls: { default: { http: [net.rpc] } },
-      nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
+    // Map network key → official chain object from genlayer-js/chains
+    // These have the correct numeric chainId the SDK needs internally
+    const chainMap = {
+      bradbury:  chains.testnetBradbury,
+      asimov:    chains.testnetAsimov,
+      studionet: chains.studionet,
+      localnet:  chains.localnet,
     };
+    const chain = chainMap[network];
+    if (!chain) throw new Error(`Unknown network: ${network}`);
 
+    // account = address string only → MetaMask / injected wallet handles signing
     const client = createClient({
-      chain: chainConfig,
-      account: wallet.address,   // Address only → MetaMask signs
+      chain,
+      account: wallet.address,
     });
     log('ok', 'Client created ✓');
 
