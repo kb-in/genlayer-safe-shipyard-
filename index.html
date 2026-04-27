@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenLayer Shipyard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+
+<!-- Real genlayer-js SDK via ESM CDN -->
+
+<script type="importmap">
+{
+  "imports": {
+    "genlayer-js": "https://esm.sh/genlayer-js@latest",
+    "genlayer-js/chains": "https://esm.sh/genlayer-js@latest/chains",
+    "genlayer-js/types": "https://esm.sh/genlayer-js@latest/types"
+  }
+}
+</script>
+
+<style>
+:root {
+  --bg: #07070d;
+  --surf: #0e0e18;
+  --surf2: #13131f;
+  --border: #1c1c2e;
+  --accent: #00ff88;
+  --purple: #7c3aed;
+  --cyan: #06b6d4;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --text: #e2e8f0;
+  --muted: #64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,.025)1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,.025)1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:58px;background:rgba(7,7,13,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:1rem;color:var(--text);text-decoration:none}
+.logo-box{width:26px;height:26px;background:linear-gradient(135deg,var(--accent),var(--cyan));border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.nav-links{display:flex}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:0 .9rem;height:58px;display:flex;align-items:center;transition:color .2s;border-bottom:2px solid transparent}
+.nav-links a:hover{color:var(--text)}
+.nav-links a.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wallet-btn{display:flex;align-items:center;gap:7px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'Space Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .2s}
+.wallet-btn:hover{border-color:var(--accent);color:var(--accent)}
+.wallet-btn.connected{border-color:var(--accent);color:var(--accent);background:rgba(0,255,136,.06)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* PAGE */
+.page{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:2rem 1.5rem;display:grid;grid-template-columns:1fr 320px;gap:1.25rem}
+.ph{grid-column:1/-1}
+.pt{font-size:1.5rem;font-weight:800;letter-spacing:-.03em}
+.pt span{color:var(--accent)}
+.ps{color:var(--muted);font-size:.8rem;margin-top:3px;font-family:'Space Mono',monospace}
+.main{display:flex;flex-direction:column;gap:1.1rem}
+.sidebar{display:flex;flex-direction:column;gap:1.1rem}
+
+/* CARD */
+.card{background:var(--surf);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ch{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.sbadge{width:20px;height:20px;border-radius:50%;background:var(--purple);color:#fff;font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sbadge.done{background:var(--accent);color:#000}
+.ct{font-size:.85rem;font-weight:700}
+.cb{padding:1.1rem}
+
+/* DROPZONE */
+.dz{border:2px dashed var(--border);border-radius:8px;padding:1.75rem;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.dz:hover,.dz.over{border-color:var(--accent);background:rgba(0,255,136,.03)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.dz-icon{font-size:1.8rem;margin-bottom:.6rem}
+.dz-text{color:var(--muted);font-size:.8rem;line-height:1.7}
+.dz-text strong{color:var(--accent)}
+.divider{display:flex;align-items:center;gap:.8rem;color:var(--muted);font-size:.72rem;margin:.85rem 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.code-wrap{background:#060610;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.code-bar{padding:.55rem 1rem;background:var(--surf2);border-bottom:1px solid var(--border);font-size:.68rem;color:var(--muted);font-family:'Space Mono',monospace}
+textarea{width:100%;height:150px;background:transparent;border:none;outline:none;color:#86efac;font-family:'Space Mono',monospace;font-size:.72rem;line-height:1.75;padding:.85rem;resize:vertical}
+textarea::placeholder{color:#1e2a3a}
+.fchip{display:flex;align-items:center;gap:9px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.18);border-radius:6px;padding:.55rem .85rem;margin-top:.7rem}
+.fchip-name{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--accent);flex:1}
+.fchip-rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;transition:color .2s}
+.fchip-rm:hover{color:var(--err)}
+
+/* NETWORK */
+.ngrid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.nopt{border:1px solid var(--border);border-radius:7px;padding:.85rem;cursor:pointer;transition:all .2s;position:relative}
+.nopt:hover{border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.02)}
+.nopt.sel{border-color:var(--accent);background:rgba(0,255,136,.04)}
+.nopt.sel::after{content:'✓';position:absolute;top:7px;right:9px;color:var(--accent);font-size:.7rem;font-weight:700}
+.nn{font-size:.82rem;font-weight:700;margin-bottom:2px}
+.nd{font-size:.68rem;color:var(--muted);line-height:1.4}
+.nb{display:inline-block;font-size:.58rem;font-family:'Space Mono',monospace;padding:2px 5px;border-radius:3px;margin-top:5px;font-weight:700;letter-spacing:.04em}
+.nb.p{background:rgba(0,255,136,.12);color:var(--accent)}
+.nb.s{background:rgba(124,58,237,.12);color:#a78bfa}
+.nb.b{background:rgba(6,182,212,.12);color:var(--cyan)}
+.nb.l{background:rgba(245,158,11,.12);color:var(--warn)}
+
+/* PARAMS */
+.pe{text-align:center;padding:1.25rem;color:var(--muted);font-size:.75rem;font-family:'Space Mono',monospace}
+.pr{margin-bottom:.65rem}
+.pr:last-child{margin-bottom:0}
+.pl{font-size:.68rem;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px}
+.pl span{color:var(--accent)}
+.pi{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Space Mono',monospace;font-size:.78rem;padding:.45rem .7rem;outline:none;transition:border-color .2s}
+.pi:focus{border-color:var(--accent)}
+
+/* DEPLOY BTN */
+.dbtn{width:100%;padding:.85rem;background:var(--accent);color:#000;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;letter-spacing:.04em;cursor:pointer;transition:all .2s;margin-top:.85rem;position:relative;overflow:hidden}
+.dbtn:hover{background:#00e07a;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,255,136,.25)}
+.dbtn:disabled{background:var(--surf2);color:var(--muted);cursor:not-allowed;transform:none;box-shadow:none}
+.dbtn.loading::after{content:'';position:absolute;right:1rem;top:50%;transform:translateY(-50%);width:15px;height:15px;border-radius:50%;border:2px solid rgba(0,0,0,.3);border-top-color:#000;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:translateY(-50%)rotate(360deg)}}
+.wn{text-align:center;font-size:.72rem;color:#a78bfa;font-family:'Space Mono',monospace;padding:.6rem;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.18);border-radius:6px;margin-top:.75rem}
+.en{text-align:center;font-size:.72rem;color:var(--err);font-family:'Space Mono',monospace;padding:.6rem;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:6px;margin-top:.75rem;display:none}
+
+/* LOG */
+.log{background:#040409;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lh{padding:.65rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.lt{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.ls{display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:'Space Mono',monospace;color:var(--muted)}
+.sd{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.sd.run{background:var(--warn);box-shadow:0 0 5px var(--warn);animation:pulse 1s infinite}
+.sd.ok{background:var(--accent);box-shadow:0 0 5px var(--accent)}
+.sd.err{background:var(--err)}
+.lb{padding:.85rem;height:240px;overflow-y:auto;font-family:'Space Mono',monospace;font-size:.68rem;line-height:1.9}
+.lb::-webkit-scrollbar{width:3px}
+.lb::-webkit-scrollbar-thumb{background:var(--border)}
+.le{color:var(--muted);font-style:italic}
+.ll{display:flex;gap:7px}
+.lt2{color:var(--muted);flex-shrink:0}
+.ll.info .lm{color:var(--text)}
+.ll.ok .lm{color:var(--accent)}
+.ll.err .lm{color:var(--err)}
+.ll.warn .lm{color:var(--warn)}
+.ll.dim .lm{color:var(--muted)}
+
+/* DEPLOYMENTS */
+.dp{background:var(--surf);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.dph{padding:.65rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.dpt{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.dpc{font-size:.62rem;background:var(--surf2);border:1px solid var(--border);border-radius:20px;padding:2px 7px;color:var(--muted);font-family:'Space Mono',monospace}
+.dpl{padding:.65rem;max-height:180px;overflow-y:auto}
+.dpe{text-align:center;padding:1.25rem;color:var(--muted);font-size:.72rem;font-family:'Space Mono',monospace}
+.di{display:flex;align-items:center;gap:7px;padding:.55rem .7rem;border-radius:6px;background:var(--surf2);border:1px solid var(--border);margin-bottom:.45rem}
+.di:last-child{margin-bottom:0}
+.dii{color:var(--accent);font-size:.8rem}
+.din{flex:1;min-width:0}
+.dic{font-size:.72rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dia{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted)}
+.dim{font-size:.55rem;padding:1px 4px;border-radius:2px}
+
+/* WALLET MODAL */
+.mo{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);align-items:center;justify-content:center}
+.mo.open{display:flex}
+.md{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:1.5rem;width:360px;max-width:95vw;animation:su .2s ease}
+@keyframes su{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.md-title{font-size:1rem;font-weight:800;margin-bottom:3px}
+.md-sub{font-size:.75rem;color:var(--muted);margin-bottom:1.1rem;font-family:'Space Mono',monospace}
+.mc{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;transition:color .2s}
+.mc:hover{color:var(--text)}
+.pk-note{display:flex;align-items:center;gap:7px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.13);border-radius:7px;padding:.65rem .9rem;margin-bottom:1rem;font-size:.72rem;color:var(--accent);font-family:'Space Mono',monospace}
+.wo{display:flex;align-items:center;gap:11px;padding:.8rem .9rem;border-radius:7px;border:1px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:.55rem}
+.wo:hover{border-color:var(--accent);background:rgba(0,255,136,.04)}
+.wo:last-child{margin-bottom:0}
+.wl{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:1.25rem}
+.wi-name{font-size:.82rem;font-weight:700}
+.wi-hint{font-size:.68rem;color:var(--muted)}
+.wa{color:var(--muted);font-size:.85rem}
+
+/* RESULT */
+.result-box{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:7px;padding:.85rem;margin-top:.75rem;display:none}
+.rb-title{font-size:.75rem;font-weight:700;color:var(--accent);margin-bottom:.5rem}
+.rb-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem}
+.rb-label{font-size:.67rem;color:var(--muted);font-family:'Space Mono',monospace}
+.rb-val{font-family:'Space Mono',monospace;font-size:.67rem;color:var(--text)}
+.rb-copy{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;transition:color .2s;padding:0 3px}
+.rb-copy:hover{color:var(--accent)}
+
+@media(max-width:720px){.page{grid-template-columns:1fr}.nav-links{display:none}.ngrid{grid-template-columns:1fr 1fr}}
+</style>
+
+</head>
+<body>
+
+<!-- WALLET MODAL -->
+
+<div class="mo" id="walletModal">
+  <div class="md">
+    <button class="mc" onclick="closeModal()">✕</button>
+    <div class="md-title">Connect Wallet</div>
+    <div class="md-sub">Sign transactions — your key stays in your wallet</div>
+    <div class="pk-note">🔒 No private key ever sent to this site</div>
+    <div class="wo" onclick="connectMM()">
+      <div class="wl" style="background:#f6851b1a">🦊</div>
+      <div><div class="wi-name">MetaMask</div><div class="wi-hint">Browser / mobile extension</div></div>
+      <span class="wa">→</span>
+    </div>
+    <div class="wo" onclick="connectWC()">
+      <div class="wl" style="background:#3b99fc1a">🔗</div>
+      <div><div class="wi-name">WalletConnect</div><div class="wi-hint">Any mobile wallet via QR code</div></div>
+      <span class="wa">→</span>
+    </div>
+    <div class="wo" onclick="connectCB()">
+      <div class="wl" style="background:#0052ff1a">🌐</div>
+      <div><div class="wi-name">Coinbase Wallet</div><div class="wi-hint">Self-custody by Coinbase</div></div>
+      <span class="wa">→</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+
+<nav>
+  <a href="#" class="logo"><div class="logo-box">⚡</div>Shipyard</a>
+  <div class="nav-links">
+    <a href="#" class="active">Deploy</a>
+    <a href="https://docs.genlayer.com" target="_blank">Docs</a>
+    <a href="https://studio.genlayer.com" target="_blank">Studio</a>
+  </div>
+  <button class="wallet-btn" id="walletBtn" onclick="openModal()">🔗 Connect Wallet</button>
+</nav>
+
+<!-- PAGE -->
+
+<div class="page">
+  <div class="ph">
+    <div class="pt">Deploy <span>Intelligent Contracts</span></div>
+    <div class="ps">// Connect Wallet → Upload Contract → Choose Network → Deploy</div>
+  </div>
+
+  <!-- MAIN -->
+
+  <div class="main">
+
+```
+<!-- Step 1 -->
+<div class="card">
+  <div class="ch"><div class="sbadge" id="b1">1</div><div class="ct">Contract Source</div></div>
+  <div class="cb">
+    <div class="dz" id="dz">
+      <input type="file" accept=".py" onchange="onFile(this)">
+      <div class="dz-icon">📄</div>
+      <div class="dz-text">Drop your <strong>.py contract</strong> here<br>or click to upload</div>
+    </div>
+    <div id="fchip" style="display:none">
+      <div class="fchip">
+        <span>🐍</span>
+        <span class="fchip-name" id="fname">contract.py</span>
+        <button class="fchip-rm" onclick="clearFile()">✕</button>
+      </div>
+    </div>
+    <div class="divider">or paste code below</div>
+    <div class="code-wrap">
+      <div class="code-bar">contract.py — Python</div>
+      <textarea id="code" placeholder="# { &quot;Depends&quot;: &quot;py-genlayer:...&quot; }
+```
+
+from genlayer import *
+
+class MyContract(gl.Contract):
+value: str
+
+```
+def __init__(self, initial_value: str):
+    self.value = initial_value
+
+@gl.public.view
+def get_value(self) -> str:
+    return self.value
+
+@gl.public.write
+def set_value(self, new_value: str):
+    self.value = new_value"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="card">
+  <div class="ch"><div class="sbadge" id="b2">2</div><div class="ct">Choose Network</div></div>
+  <div class="cb">
+    <div class="ngrid">
+      <div class="nopt sel" onclick="selNet(this,'bradbury')">
+        <div class="nn">Testnet Bradbury</div>
+        <div class="nd">LLM inference testnet — primary deployment target</div>
+        <span class="nb p">PRIMARY</span>
+      </div>
+      <div class="nopt" onclick="selNet(this,'asimov')">
+        <div class="nn">Testnet Asimov</div>
+        <div class="nd">Validator onboarding testnet</div>
+        <span class="nb s">VALIDATORS</span>
+      </div>
+      <div class="nopt" onclick="selNet(this,'studionet')">
+        <div class="nn">Studionet</div>
+        <div class="nd">Browser-based Studio environment</div>
+        <span class="nb b">BROWSER</span>
+      </div>
+      <div class="nopt" onclick="selNet(this,'localnet')">
+        <div class="nn">Localnet</div>
+        <div class="nd">Docker-based local development node</div>
+        <span class="nb l">LOCAL</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 3 -->
+<div class="card">
+  <div class="ch"><div class="sbadge" id="b3">3</div><div class="ct">Configure &amp; Deploy</div></div>
+  <div class="cb">
+    <div id="params"><div class="pe">Upload a valid contract to see constructor parameters.</div></div>
+    <div id="walletNote" class="wn">🔗 Connect your wallet above — no private key required</div>
+    <div id="errNote" class="en"></div>
+    <button class="dbtn" id="dbtn" disabled onclick="deploy()">⚡ Deploy Contract</button>
+    <div class="result-box" id="result">
+      <div class="rb-title">✅ Contract Deployed!</div>
+      <div class="rb-row">
+        <span class="rb-label">Address</span>
+        <span class="rb-val" id="rAddr">—</span>
+        <button class="rb-copy" onclick="copy('rAddr')">📋</button>
+      </div>
+      <div class="rb-row">
+        <span class="rb-label">Tx Hash</span>
+        <span class="rb-val" id="rTx">—</span>
+        <button class="rb-copy" onclick="copy('rTx')">📋</button>
+      </div>
+      <div class="rb-row">
+        <span class="rb-label">Network</span>
+        <span class="rb-val" id="rNet">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+
+  <!-- SIDEBAR -->
+
+  <div class="sidebar">
+    <div class="dp">
+      <div class="dph">
+        <div class="dpt">Deployments</div>
+        <div class="dpc" id="depCnt">0</div>
+      </div>
+      <div class="dpl" id="depList"><div class="dpe">No deployments yet</div></div>
+    </div>
+    <div class="log">
+      <div class="lh">
+        <div class="lt">Deploy Log</div>
+        <div class="ls"><div class="sd" id="sd"></div><span id="st">Idle</span></div>
+      </div>
+      <div class="lb" id="logBody"><span class="le">Waiting for deploy command…</span></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ─── IMPORTS ─────────────────────────────────────────────────────────────────
+// We import genlayer-js at runtime via ESM CDN
+// For wallet signing we use window.ethereum (MetaMask / injected provider)
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+window.state = {
+  wallet: null,      // { address, provider }
+  network: 'bradbury',
+  code: '',
+  fileName: 'contract.py',
+  deployments: [],
+};
+
+// ─── NETWORK CONFIG (official GenLayer endpoints) ────────────────────────────
+window.NETS = {
+  bradbury:  { name: 'Testnet Bradbury', rpc: 'https://rpc.bradbury.genlayerlabs.com', badge: 'p' },
+  asimov:    { name: 'Testnet Asimov',   rpc: 'https://rpc.asimov.genlayerlabs.com',   badge: 's' },
+  studionet: { name: 'Studionet',        rpc: 'https://studio.genlayer.com/api',        badge: 'b' },
+  localnet:  { name: 'Localnet',         rpc: 'http://localhost:4000/api',              badge: 'l' },
+};
+
+// ─── WALLET ───────────────────────────────────────────────────────────────────
+window.openModal  = () => document.getElementById('walletModal').classList.add('open');
+window.closeModal = () => document.getElementById('walletModal').classList.remove('open');
+document.getElementById('walletModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('walletModal')) window.closeModal();
+});
+
+window.connectMM = async () => {
+  closeModal();
+  if (!window.ethereum) {
+    showErr('MetaMask not detected. Install MetaMask extension and try again.');
+    return;
+  }
+  try {
+    log('info', 'Requesting MetaMask accounts…');
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts.length) throw new Error('No accounts returned');
+    setWallet(accounts[0], 'MetaMask');
+  } catch(e) {
+    showErr('MetaMask connection failed: ' + e.message);
+  }
+};
+
+window.connectWC = () => {
+  closeModal();
+  showErr('WalletConnect: Install the WalletConnect npm package or use wagmi/web3modal for full QR-code support.');
+};
+
+window.connectCB = async () => {
+  closeModal();
+  // Coinbase Wallet injects window.ethereum when its extension is active
+  if (window.ethereum?.isCoinbaseWallet) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      setWallet(accounts[0], 'Coinbase');
+    } catch(e) { showErr(e.message); }
+  } else {
+    showErr('Coinbase Wallet extension not detected.');
+  }
+};
+
+function setWallet(address, name) {
+  window.state.wallet = { address };
+  const btn = document.getElementById('walletBtn');
+  btn.innerHTML = `<span class="dot"></span>${short(address)}`;
+  btn.classList.add('connected');
+  log('ok', `Wallet connected (${name}): ${short(address)}`);
+  hideErr();
+  document.getElementById('walletNote').style.display = 'none';
+  checkReady();
+}
+
+// ─── FILE UPLOAD ──────────────────────────────────────────────────────────────
+window.onFile = (input) => {
+  const file = input.files[0];
+  if (!file || !file.name.endsWith('.py')) return;
+  document.getElementById('fname').textContent = file.name;
+  document.getElementById('fchip').style.display = 'block';
+  document.getElementById('dz').style.display = 'none';
+  window.state.fileName = file.name;
+  const r = new FileReader();
+  r.onload = e => { document.getElementById('code').value = e.target.result; onCodeChange(); };
+  r.readAsText(file);
+};
+window.clearFile = () => {
+  document.getElementById('fchip').style.display = 'none';
+  document.getElementById('dz').style.display = 'block';
+  document.getElementById('code').value = '';
+  window.state.code = '';
+  badge(1, false); checkReady();
+  document.getElementById('params').innerHTML = '<div class="pe">Upload a valid contract to see constructor parameters.</div>';
+};
+
+// Drag & drop
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f?.name.endsWith('.py')) {
+    window.state.fileName = f.name;
+    document.getElementById('fname').textContent = f.name;
+    document.getElementById('fchip').style.display = 'block';
+    dz.style.display = 'none';
+    const r = new FileReader();
+    r.onload = ev => { document.getElementById('code').value = ev.target.result; onCodeChange(); };
+    r.readAsText(f);
+  }
+});
+document.getElementById('code').addEventListener('input', onCodeChange);
+
+function onCodeChange() {
+  const c = document.getElementById('code').value.trim();
+  window.state.code = c;
+  if (c.length > 10) { badge(1, true); renderParams(c); } else { badge(1, false); }
+  checkReady();
+}
+
+// ─── PARSE PARAMS FROM PYTHON __init__ ───────────────────────────────────────
+function renderParams(code) {
+  const m = code.match(/def __init__\(self(?:,\s*([^)]+))?\)/);
+  const raw = m?.[1] ?? '';
+  const params = raw ? raw.split(',').map(p => p.trim().split(':')[0].split('=')[0].trim()).filter(Boolean) : [];
+  const box = document.getElementById('params');
+  if (!params.length) {
+    box.innerHTML = '<div class="pe" style="color:var(--accent)">✓ No constructor params needed</div>';
+  } else {
+    box.innerHTML = params.map(p => `
+      <div class="pr">
+        <div class="pl"><span>${p}</span> : str</div>
+        <input class="pi" id="param_${p}" placeholder="Value for ${p}…">
+      </div>`).join('');
+  }
+}
+
+// ─── NETWORK SELECT ───────────────────────────────────────────────────────────
+window.selNet = (el, net) => {
+  document.querySelectorAll('.nopt').forEach(n => n.classList.remove('sel'));
+  el.classList.add('sel');
+  window.state.network = net;
+  log('dim', `Network → ${NETS[net].name}`);
+};
+
+// ─── DEPLOY ───────────────────────────────────────────────────────────────────
+window.deploy = async () => {
+  const { wallet, network, code, fileName } = window.state;
+  if (!wallet || !code) return;
+
+  const btn = document.getElementById('dbtn');
+  btn.disabled = true; btn.classList.add('loading'); btn.textContent = 'Deploying…';
+  clearLog(); setStatus('run', 'Deploying'); hideErr();
+
+  try {
+    const net = NETS[network];
+    log('info', `Deploying to ${net.name}…`);
+    log('dim', `Wallet: ${short(wallet.address)}`);
+    log('dim', `RPC: ${net.rpc}`);
+
+    // Dynamically import genlayer-js
+    log('info', 'Loading genlayer-js SDK…');
+    const { createClient } = await import('genlayer-js');
+    log('ok', 'SDK loaded ✓');
+
+    // Build chain config with MetaMask as signer
+    // Pass just the address — MetaMask handles signing via window.ethereum
+    const chainConfig = {
+      id: network,
+      name: net.name,
+      rpcUrls: { default: { http: [net.rpc] } },
+      nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
+    };
+
+    const client = createClient({
+      chain: chainConfig,
+      account: wallet.address,   // Address only → MetaMask signs
+    });
+    log('ok', 'Client created ✓');
+
+    log('info', 'Initialising consensus smart contract…');
+    await client.initializeConsensusSmartContract();
+    log('ok', 'Consensus contract ready ✓');
+
+    // Collect constructor args
+    const paramInputs = document.querySelectorAll('[id^="param_"]');
+    const args = Array.from(paramInputs).map(i => i.value.trim());
+    if (args.length) log('dim', `Constructor args: ${JSON.stringify(args)}`);
+
+    log('info', 'Requesting wallet signature — check MetaMask…');
+    const txHash = await client.deployContract({
+      code,
+      args,
+      leaderOnly: false,
+    });
+    log('ok', `Transaction submitted: ${short(txHash, 12)}`);
+    log('info', 'Waiting for acceptance (may take ~30s)…');
+
+    const { TransactionStatus } = await import('genlayer-js/types');
+    const receipt = await client.waitForTransactionReceipt({
+      hash: txHash,
+      status: TransactionStatus.ACCEPTED,
+      retries: 60,
+      interval: 5000,
+    });
+
+    const contractAddr = receipt?.data?.contract_address ?? receipt?.contractAddress ?? '(see tx)';
+    log('ok', `Deployed! Address: ${contractAddr}`);
+    log('dim', `Tx: ${txHash}`);
+    setStatus('ok', 'Success');
+
+    // Show result box
+    document.getElementById('rAddr').textContent = contractAddr;
+    document.getElementById('rTx').textContent = short(txHash, 14);
+    document.getElementById('rTx').title = txHash;
+    document.getElementById('rNet').textContent = net.name;
+    document.getElementById('result').style.display = 'block';
+
+    // Add to deployments
+    window.state.deployments.unshift({ name: fileName, addr: contractAddr, net: network, tx: txHash });
+    renderDeps();
+
+  } catch(e) {
+    log('err', 'Deploy failed: ' + (e.message || e));
+    setStatus('err', 'Failed');
+    showErr(e.message || 'Deployment failed. Check console for details.');
+    console.error(e);
+  }
+
+  btn.classList.remove('loading'); btn.textContent = '⚡ Deploy Contract'; btn.disabled = false;
+  checkReady();
+};
+
+// ─── UI HELPERS ───────────────────────────────────────────────────────────────
+function checkReady() {
+  const ok = !!window.state.wallet && window.state.code.length > 10;
+  document.getElementById('dbtn').disabled = !ok;
+}
+function badge(n, done) {
+  const el = document.getElementById('b'+n);
+  el.classList.toggle('done', done);
+  el.textContent = done ? '✓' : n;
+}
+function clearLog() { document.getElementById('logBody').innerHTML = ''; }
+function log(type, msg) {
+  const body = document.getElementById('logBody');
+  const t = new Date().toLocaleTimeString('en',{hour12:false});
+  const ll = document.createElement('div');
+  ll.className = 'll ' + type;
+  ll.innerHTML = `<span class="lt2">${t}</span><span class="lm">${msg}</span>`;
+  body.appendChild(ll);
+  body.scrollTop = body.scrollHeight;
+}
+function setStatus(s, txt) {
+  document.getElementById('sd').className = 'sd ' + (s==='run'?'run':s==='ok'?'ok':s==='err'?'err':'');
+  document.getElementById('st').textContent = txt;
+}
+function showErr(msg) {
+  const el = document.getElementById('errNote');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function hideErr() { document.getElementById('errNote').style.display = 'none'; }
+function short(str, n=8) { return str ? str.slice(0, n) + '…' + str.slice(-(n/2)) : '—'; }
+window.copy = (id) => {
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.textContent || el.title || '').catch(()=>{});
+};
+function renderDeps() {
+  const list = document.getElementById('depList');
+  const deps = window.state.deployments;
+  document.getElementById('depCnt').textContent = deps.length;
+  list.innerHTML = deps.length ? deps.map(d => `
+    <div class="di">
+      <span class="dii">⚡</span>
+      <div class="din">
+        <div class="dic">${d.name}</div>
+        <div class="dia">${short(d.addr)}</div>
+      </div>
+      <span class="nb ${NETS[d.net].badge} dim">${NETS[d.net].name.replace('Testnet ','')}</span>
+    </div>`).join('') : '<div class="dpe">No deployments yet</div>';
+}
+</script>
+
+</body>
+</html>
