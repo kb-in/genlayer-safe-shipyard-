@@ -7,14 +7,14 @@
 <title>GenLayer Shipyard</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 
-<!-- Real genlayer-js SDK via ESM CDN -->
+<!-- Real genlayer-js SDK via ESM CDN — pinned to stable version -->
 
 <script type="importmap">
 {
   "imports": {
-    "genlayer-js": "https://esm.sh/genlayer-js@latest",
-    "genlayer-js/chains": "https://esm.sh/genlayer-js@latest/chains",
-    "genlayer-js/types": "https://esm.sh/genlayer-js@latest/types"
+    "genlayer-js": "https://esm.sh/genlayer-js@0.9.0",
+    "genlayer-js/chains": "https://esm.sh/genlayer-js@0.9.0/chains",
+    "genlayer-js/types": "https://esm.sh/genlayer-js@0.9.0/types"
   }
 }
 </script>
@@ -374,11 +374,12 @@ window.state = {
   deployments: [],
 };
 
-// ─── NETWORK CONFIG (official GenLayer endpoints) ────────────────────────────
+// ─── NETWORK CONFIG ───────────────────────────────────────────────────────────
+// endpoint overrides the SDK's baked-in RPC; update here if GenLayer changes URLs
 window.NETS = {
   bradbury:  { name: 'Testnet Bradbury', rpc: 'https://rpc.bradbury.genlayerlabs.com', badge: 'p' },
   asimov:    { name: 'Testnet Asimov',   rpc: 'https://rpc.asimov.genlayerlabs.com',   badge: 's' },
-  studionet: { name: 'Studionet',        rpc: 'https://studio.genlayer.com/api',        badge: 'b' },
+  studionet: { name: 'Studionet',        rpc: 'https://studio.genlayer.com:8443/api',  badge: 'b' },
   localnet:  { name: 'Localnet',         rpc: 'http://localhost:4000/api',              badge: 'l' },
 };
 
@@ -526,8 +527,7 @@ window.deploy = async () => {
     const chains = await import('genlayer-js/chains');
     log('ok', 'SDK loaded ✓');
 
-    // Map network key → official chain object from genlayer-js/chains
-    // These have the correct numeric chainId the SDK needs internally
+    // Map network key → official chain object (carries correct numeric chainId)
     const chainMap = {
       bradbury:  chains.testnetBradbury,
       asimov:    chains.testnetAsimov,
@@ -537,9 +537,14 @@ window.deploy = async () => {
     const chain = chainMap[network];
     if (!chain) throw new Error(`Unknown network: ${network}`);
 
-    // account = address string only → MetaMask / injected wallet handles signing
+    // Override the SDK's built-in RPC with our known-good endpoint
+    // The SDK's baked-in URL may be rate-limited or stale
+    log('dim', `RPC: ${net.rpc}`);
+
+    // account = address string → MetaMask signs; no private key sent here
     const client = createClient({
       chain,
+      endpoint: net.rpc,
       account: wallet.address,
     });
     log('ok', 'Client created ✓');
